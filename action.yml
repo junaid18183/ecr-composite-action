@@ -1,15 +1,24 @@
 name: "Hello World"
 description: "Greet someone"
 inputs:
-  namespace:
+  k8s_namespace:
     description: "Kubernetes Namespace"
     required: true
     default: "demo"
-  imagename:
+  image_name:
     description: "ImageName"
     required: true
   context:
     description: "Context"
+    required: true
+  aws-access-key-id:
+    description: "aws-access-key-id"
+    required: true
+  aws-secret-access-key:
+    description: "aws-secret-access-key"
+    required: true
+  aws-region:
+    description: "aws-region"
     required: true
 # outputs:
 #   trivy_scan:
@@ -63,66 +72,59 @@ runs:
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
-      shell: bash
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
 
-    # - name: Login to Amazon ECR
-    #   id: login-ecr
-    #   uses: aws-actions/amazon-ecr-login@v1
-    #   shell: bash
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
 
-    # - name: Setup Docker Buildx
-    #   shell: bash
-    #   uses: docker/setup-buildx-action@v2
+    - name: Setup Docker Buildx
+      uses: docker/setup-buildx-action@v2
 
-    # - name: Extract Docker metadata for ${{ inputs.imagename }}
-    #   id: image_meta
-    #   shell: bash
-    #   uses: docker/metadata-action@v4
-    #   env:
-    #     REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-    #   with:
-    #     images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-    #     tags: |
-    #       type=sha
-    #       type=semver,pattern={{version}}
-    #       type=semver,pattern={{major}}-snapshot
-    #       type=raw,value=latest
+    - name: Extract Docker metadata for ${{ inputs.imagename }}
+      id: image_meta
+      uses: docker/metadata-action@v4
+      env:
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=sha
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}-snapshot
+          type=raw,value=latest
 
-    # - name: Build and Push Webscarper Image
-    #   id: build_and_push_image
-    #   shell: bash
-    #   uses: docker/build-push-action@v3
-    #   with:
-    #     context: ${{ inputs.context }}
-    #     platforms: linux/amd64
-    #     push: ${{ github.event_name != 'pull_request' }}
-    #     tags: ${{ steps.image_meta.outputs.tags }}
-    #     labels: ${{ steps.image_meta.outputs.labels }}
+    - name: Build and Push Webscarper Image
+      id: build_and_push_image
+      uses: docker/build-push-action@v3
+      with:
+        context: ${{ inputs.context }}
+        platforms: linux/amd64
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.image_meta.outputs.tags }}
+        labels: ${{ steps.image_meta.outputs.labels }}
 
-    # - name: SBOM
-    #   uses: anchore/sbom-action@v0
-    #   if: github.event_name != 'pull_request'
-    #   shell: bash
-    #   env:
-    #     REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-    #   with:
-    #     image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-    #     artifact-name: ${{ github.sha }}-${{ inputs.imagename }}_sbom.json
+    - name: SBOM
+      uses: anchore/sbom-action@v0
+      if: github.event_name != 'pull_request'
+      env:
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      with:
+        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+        artifact-name: ${{ github.sha }}-${{ inputs.imagename }}_sbom.json
 
-    # - name: Run Trivy Vulnerability Scanner
-    #   id: trivy
-    #   shell: bash
-    #   uses: aquasecurity/trivy-action@master
-    #   env:
-    #     REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-    #   with:
-    #     image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-    #     format: "table"
-    #     exit-code: "1"
-    #     ignore-unfixed: true
-    #     vuln-type: "os,library"
-    #     severity: "CRITICAL,HIGH"
+    - name: Run Trivy Vulnerability Scanner
+      id: trivy
+      uses: aquasecurity/trivy-action@master
+      env:
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+        format: "table"
+        exit-code: "1"
+        ignore-unfixed: true
+        vuln-type: "os,library"
+        severity: "CRITICAL,HIGH"
