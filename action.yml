@@ -27,6 +27,7 @@ runs:
     #   shell: bash
 
     - name: Set Env Vars (default)
+      shell: bash
       run: |
         REPOSITORY_NAME=${GITHUB_REPOSITORY#*\/}
         GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
@@ -38,6 +39,7 @@ runs:
 
     - name: Set env vars (dev)
       if: endsWith(github.ref, '/dev')
+      shell: bash
       run: |
         echo "IMAGE_NAME=${{ env.REPOSITORY_NAME }}-dev-${{ inputs.imagename }}" >> $GITHUB_ENV
         echo "K8S_NAMESPACE=${{ inputs.namespace}}-dev" >> $GITHUB_ENV
@@ -45,6 +47,7 @@ runs:
 
     - name: Set env vars (qa)
       if: endsWith(github.ref, '/qa')
+      shell: bash
       run: |
         echo "IMAGE_NAME=${{ env.REPOSITORY_NAME }}-qa-${{ inputs.imagename }}" >> $GITHUB_ENV
         echo "K8S_NAMESPACE=${{ inputs.namespace}}-qa" >> $GITHUB_ENV
@@ -52,6 +55,7 @@ runs:
 
     - name: Set env vars (relese)
       if: endsWith(github.ref, '/release*')
+      shell: bash
       run: |
         echo "IMAGE_NAME=${{ env.REPOSITORY_NAME }}-qa-${{ inputs.imagename }}" >> $GITHUB_ENV
         echo "K8S_NAMESPACE=${{ inputs.namespace}}-qa" >> $GITHUB_ENV
@@ -59,69 +63,77 @@ runs:
 
     - name: Set env vars (prod)
       if: endsWith(github.ref, '/main')
+      shell: bash
       run: |
         echo "IMAGE_NAME=${{ env.REPOSITORY_NAME }}-prod-${{ inputs.imagename }}" >> $GITHUB_ENV
         echo "K8S_NAMESPACE=${{ inputs.namespace}}-prod" >> $GITHUB_ENV
         echo "EKS_CLUSTER_NAME=${REPOSITORY_NAME//_/-}-prod" >> $GITHUB_ENV
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+    # - name: Configure AWS Credentials
+    #   uses: aws-actions/configure-aws-credentials@v1
+    #   shell: bash
+    #   with:
+    #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    #     aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+    # - name: Login to Amazon ECR
+    #   id: login-ecr
+    #   uses: aws-actions/amazon-ecr-login@v1
+    #   shell: bash
 
-    - name: Setup Docker Buildx
-      uses: docker/setup-buildx-action@v2
+    # - name: Setup Docker Buildx
+    #   shell: bash
+    #   uses: docker/setup-buildx-action@v2
 
-    - name: Extract Docker metadata for ${{ inputs.imagename }}
-      id: image_meta
-      uses: docker/metadata-action@v4
-      env:
-        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=sha
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}-snapshot
-          type=raw,value=latest
+    # - name: Extract Docker metadata for ${{ inputs.imagename }}
+    #   id: image_meta
+    #   shell: bash
+    #   uses: docker/metadata-action@v4
+    #   env:
+    #     REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+    #   with:
+    #     images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+    #     tags: |
+    #       type=sha
+    #       type=semver,pattern={{version}}
+    #       type=semver,pattern={{major}}-snapshot
+    #       type=raw,value=latest
 
-    - name: Build and Push Webscarper Image
-      id: build_and_push_image
-      uses: docker/build-push-action@v3
-      with:
-        context: ${{ inputs.context }}
-        platforms: linux/amd64
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.image_meta.outputs.tags }}
-        labels: ${{ steps.image_meta.outputs.labels }}
+    # - name: Build and Push Webscarper Image
+    #   id: build_and_push_image
+    #   shell: bash
+    #   uses: docker/build-push-action@v3
+    #   with:
+    #     context: ${{ inputs.context }}
+    #     platforms: linux/amd64
+    #     push: ${{ github.event_name != 'pull_request' }}
+    #     tags: ${{ steps.image_meta.outputs.tags }}
+    #     labels: ${{ steps.image_meta.outputs.labels }}
 
-    - name: SBOM
-      uses: anchore/sbom-action@v0
-      if: github.event_name != 'pull_request'
-      env:
-        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      with:
-        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-        artifact-name: ${{ github.sha }}-${{ inputs.imagename }}_sbom.json
+    # - name: SBOM
+    #   uses: anchore/sbom-action@v0
+    #   if: github.event_name != 'pull_request'
+    #   shell: bash
+    #   env:
+    #     REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+    #   with:
+    #     image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+    #     artifact-name: ${{ github.sha }}-${{ inputs.imagename }}_sbom.json
 
-    - name: Run Trivy Vulnerability Scanner
-      id: trivy
-      uses: aquasecurity/trivy-action@master
-      env:
-        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      with:
-        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-        format: "table"
-        exit-code: "1"
-        ignore-unfixed: true
-        vuln-type: "os,library"
-        severity: "CRITICAL,HIGH"
+    # - name: Run Trivy Vulnerability Scanner
+    #   id: trivy
+    #   shell: bash
+    #   uses: aquasecurity/trivy-action@master
+    #   env:
+    #     REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+    #   with:
+    #     image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+    #     format: "table"
+    #     exit-code: "1"
+    #     ignore-unfixed: true
+    #     vuln-type: "os,library"
+    #     severity: "CRITICAL,HIGH"
 
     - run: goodbye.sh
       shell: bash
