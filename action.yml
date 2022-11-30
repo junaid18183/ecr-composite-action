@@ -1,0 +1,119 @@
+name: 'Hello World'
+description: 'Greet someone'
+inputs:
+  who-to-greet:  # id of input
+    description: 'Who to greet'
+    required: true
+    default: 'World'
+outputs:
+  random-number:
+    description: "Random number"
+    value: ${{ steps.random-number-generator.outputs.random-number }}
+runs:
+  using: "composite"
+  steps:
+    - run: echo Hello ${{ inputs.who-to-greet }}.
+      shell: bash
+    - id: random-number-generator
+      run: echo "random-number=$(echo $RANDOM)" >> $GITHUB_OUTPUT
+      shell: bash
+    - run: echo "${{ github.action_path }}" >> $GITHUB_PATH
+      shell: bash
+    - run: goodbye.sh
+      shell: bash
+
+    # - name: Set Env Vars (default)
+    #   run: |
+    #     REPOSITORY_NAME=${GITHUB_REPOSITORY#*\/}
+    #     GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
+    #     echo "REPOSITORY_NAME=${REPOSITORY_NAME//_/-}" >> $GITHUB_ENV
+    #     echo "WEBSCRAPER_IMAGE_NAME=${{ env.REPOSITORY_NAME }}-dev-webscraper" >> $GITHUB_ENV
+    #     echo "K8S_NAMESPACE=demo-dev" >> $GITHUB_ENV
+    #     echo "EKS_CLUSTER_NAME=${REPOSITORY_NAME//_/-}-dev" >> $GITHUB_ENV
+    #     echo "TAG=sha-${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+    # - name: Set env vars (dev)
+    #   if: endsWith(github.ref, '/dev')
+    #   run: |
+    #     echo "WEBSCRAPER_IMAGE_NAME=${{ env.REPOSITORY_NAME }}-dev-webscraper" >> $GITHUB_ENV
+    #     echo "K8S_NAMESPACE=demo-dev" >> $GITHUB_ENV
+    #     echo "EKS_CLUSTER_NAME=${REPOSITORY_NAME//_/-}-dev" >> $GITHUB_ENV
+
+    # - name: Set env vars (qa)
+    #   if: endsWith(github.ref, '/qa')
+    #   run: |
+    #     echo "WEBSCRAPER_IMAGE_NAME=${{ env.REPOSITORY_NAME }}-qa-webscraper" >> $GITHUB_ENV
+    #     echo "K8S_NAMESPACE=demo-qa" >> $GITHUB_ENV
+    #     echo "EKS_CLUSTER_NAME=${REPOSITORY_NAME//_/-}-qa" >> $GITHUB_ENV
+
+    # - name: Set env vars (relese)
+    #   if: endsWith(github.ref, '/release*')
+    #   run: |
+    #     echo "WEBSCRAPER_IMAGE_NAME=${{ env.REPOSITORY_NAME }}-qa-webscraper" >> $GITHUB_ENV
+    #     echo "K8S_NAMESPACE=demo-qa" >> $GITHUB_ENV
+    #     echo "EKS_CLUSTER_NAME=${REPOSITORY_NAME//_/-}-qa" >> $GITHUB_ENV
+
+    # - name: Set env vars (prod)
+    #   if: endsWith(github.ref, '/main')
+    #   run: |
+    #     echo "WEBSCRAPER_IMAGE_NAME=${{ env.REPOSITORY_NAME }}-prod-webscraper" >> $GITHUB_ENV
+    #     echo "K8S_NAMESPACE=demo-prod" >> $GITHUB_ENV
+    #     echo "EKS_CLUSTER_NAME=${REPOSITORY_NAME//_/-}-prod" >> $GITHUB_ENV
+
+    # - name: Configure AWS Credentials
+    #   uses: aws-actions/configure-aws-credentials@v1
+    #   with:
+    #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    #     aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+    # - name: Login to Amazon ECR
+    #   id: login-ecr
+    #   uses: aws-actions/amazon-ecr-login@v1
+
+    # - name: Setup Docker Buildx
+    #   uses: docker/setup-buildx-action@v2
+
+    # - name: Extract Docker metadata for webscraper
+    #   id: meta_webscraper
+    #   uses: docker/metadata-action@v4
+    #   env:
+    #     REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+    #   with:
+    #     images: ${{ env.REGISTRY }}/${{ env.WEBSCRAPER_IMAGE_NAME }}
+    #     tags: |
+    #       type=sha
+    #       type=semver,pattern={{version}}
+    #       type=semver,pattern={{major}}-snapshot
+    #       type=raw,value=latest
+
+    # - name: Build and Push Webscarper Image
+    #   id: build-and-push_webscraper
+    #   uses: docker/build-push-action@v3
+    #   with:
+    #     context: datateam_containers/webscraper
+    #     platforms: linux/amd64
+    #     push: ${{ github.event_name != 'pull_request' }}
+    #     tags: ${{ steps.meta_webscraper.outputs.tags }}
+    #     labels: ${{ steps.meta_webscraper.outputs.labels }}
+
+    # - name: SBOM
+    #   uses: anchore/sbom-action@v0
+    #   if: github.event_name != 'pull_request'
+    #   env:
+    #     REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+    #   with:
+    #     image: ${{ env.REGISTRY }}/${{ env.WEBSCRAPER_IMAGE_NAME }}:latest
+    #     artifact-name: ${{ github.sha }}-webscraper_sbom.json
+
+    # - name: Run Trivy Vulnerability Scanner
+    #   uses: aquasecurity/trivy-action@master
+    #   env:
+    #     REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+    #   with:
+    #     image-ref: ${{ env.REGISTRY }}/${{ env.WEBSCRAPER_IMAGE_NAME }}:latest
+    #     format: "table"
+    #     exit-code: "1"
+    #     ignore-unfixed: true
+    #     vuln-type: "os,library"
+    #     severity: "CRITICAL,HIGH"
