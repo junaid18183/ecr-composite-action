@@ -46,7 +46,7 @@ runs:
         GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
         echo "REPOSITORY_NAME=${REPOSITORY_NAME//_/-}" >> $GITHUB_ENV
         echo "IMAGE_NAME=${{ env.REPOSITORY_NAME }}-dev-${{ inputs.image_name }}" >> $GITHUB_ENV
-        echo "K8S_NAMESPACE=${{ inputs.namespace}}-dev" >> $GITHUB_ENV
+        echo "K8S_NAMESPACE=${{ inputs.k8s_namespace}}-dev" >> $GITHUB_ENV
         echo "EKS_CLUSTER_NAME=${REPOSITORY_NAME//_/-}-dev" >> $GITHUB_ENV
         echo "TAG=sha-${GITHUB_SHA::7}" >> $GITHUB_ENV
 
@@ -55,7 +55,7 @@ runs:
       shell: bash
       run: |
         echo "IMAGE_NAME=${{ env.REPOSITORY_NAME }}-dev-${{ inputs.image_name }}" >> $GITHUB_ENV
-        echo "K8S_NAMESPACE=${{ inputs.namespace}}-dev" >> $GITHUB_ENV
+        echo "K8S_NAMESPACE=${{ inputs.k8s_namespace}}-dev" >> $GITHUB_ENV
         echo "EKS_CLUSTER_NAME=${REPOSITORY_NAME//_/-}-dev" >> $GITHUB_ENV
 
     - name: Set env vars (qa)
@@ -63,7 +63,7 @@ runs:
       shell: bash
       run: |
         echo "IMAGE_NAME=${{ env.REPOSITORY_NAME }}-qa-${{ inputs.image_name }}" >> $GITHUB_ENV
-        echo "K8S_NAMESPACE=${{ inputs.namespace}}-qa" >> $GITHUB_ENV
+        echo "K8S_NAMESPACE=${{ inputs.k8s_namespace}}-qa" >> $GITHUB_ENV
         echo "EKS_CLUSTER_NAME=${REPOSITORY_NAME//_/-}-qa" >> $GITHUB_ENV
 
     - name: Set env vars (relese)
@@ -71,7 +71,7 @@ runs:
       shell: bash
       run: |
         echo "IMAGE_NAME=${{ env.REPOSITORY_NAME }}-qa-${{ inputs.image_name }}" >> $GITHUB_ENV
-        echo "K8S_NAMESPACE=${{ inputs.namespace}}-qa" >> $GITHUB_ENV
+        echo "K8S_NAMESPACE=${{ inputs.k8s_namespace}}-qa" >> $GITHUB_ENV
         echo "EKS_CLUSTER_NAME=${REPOSITORY_NAME//_/-}-qa" >> $GITHUB_ENV
 
     - name: Set env vars (prod)
@@ -79,7 +79,7 @@ runs:
       shell: bash
       run: |
         echo "IMAGE_NAME=${{ env.REPOSITORY_NAME }}-prod-${{ inputs.image_name }}" >> $GITHUB_ENV
-        echo "K8S_NAMESPACE=${{ inputs.namespace}}-prod" >> $GITHUB_ENV
+        echo "K8S_NAMESPACE=${{ inputs.k8s_namespace}}-prod" >> $GITHUB_ENV
         echo "EKS_CLUSTER_NAME=${REPOSITORY_NAME//_/-}-prod" >> $GITHUB_ENV
 
     - name: Configure AWS Credentials
