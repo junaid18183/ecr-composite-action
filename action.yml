@@ -1,10 +1,9 @@
-name: "Hello World"
-description: "Greet someone"
+name: "Build and Push to ECR"
+description: "Build and Push to ECR"
 inputs:
   k8s_namespace:
     description: "Kubernetes Namespace"
     required: true
-    default: "demo"
   image_name:
     description: "ImageName"
     required: true
@@ -20,14 +19,27 @@ inputs:
   aws-region:
     description: "aws-region"
     required: true
-# outputs:
-#   trivy_scan:
-#     description: "Trivy Scan result"
-#     value: ${{ steps.trivy.outputs.random-number }}
+outputs:
+  registry:
+    description: "ECR Registry"
+    value: ${{ steps.login-ecr.outputs.registry }}
+  tag:
+    description: "Image Tag"
+    value: ${{ steps.output.outputs.tag }}
+  image_name:
+    description: "Image Tag"
+    value: ${{ steps.output.outputs.image_name }}
+  k8s_namespace:
+    description: "K8s Namesapce"
+    value: ${{ steps.output.outputs.k8s_namespace }}
+  eks_clustername:
+    description: "K8s Namesapce"
+    value: ${{ steps.output.outputs.eks_clustername }}
 runs:
   using: "composite"
   steps:
     - name: Set Env Vars (default)
+      id: env_default
       shell: bash
       run: |
         REPOSITORY_NAME=${GITHUB_REPOSITORY#*\/}
@@ -128,3 +140,14 @@ runs:
         ignore-unfixed: true
         vuln-type: "os,library"
         severity: "CRITICAL,HIGH"
+
+    - name: Output
+      id: output
+      shell: bash
+      env:
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      run: |
+        echo "tag=sha-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+        echo "image_name=${{ env.IMAGE_NAME }}" >> $GITHUB_OUTPUT
+        echo "k8s_namespace=${{ env.K8S_NAMESPACE }}" >> $GITHUB_OUTPUT
+        echo "eks_clustername=${{ env.EKS_CLUSTER_NAME }}" >> $GITHUB_OUTPUT
